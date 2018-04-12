@@ -1,0 +1,26 @@
+{
+  "name": "ocd-neil",
+  "version": "0.0.1",
+  "description": "OCD Neil font",
+  "main": "index.js",
+  "repository": "https://github.com/pogon/ocd-neil",
+  "author": "Goran Butorac <git@gbut.com>",
+  "license": "MIT",
+  "scripts": {
+    "watch": "nodemon index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^1.17.2"
+  },
+  "dependencies": {
+    "cubic2quad": "^1.1.1",
+    "express": "^4.16.3",
+    "lodash": "^4.17.5",
+    "microbuffer": "^1.0.0",
+    "pdfkit": "^0.8.3",
+    "potrace": "^2.1.1",
+    "svg2ttf": "^4.1.0",
+    "svgpath": "^2.2.1",
+    "xmldom": "^0.1.27"
+  }
+}
