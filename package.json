@@ -7,7 +7,7 @@
   "author": "Goran Butorac <git@gbut.com>",
   "license": "MIT",
   "scripts": {
-    "watch": "nodemon index.js"
+    "dev": "nodemon index.js"
   },
   "devDependencies": {
     "nodemon": "^1.17.2"
