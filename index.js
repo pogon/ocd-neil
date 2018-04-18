@@ -1,17 +1,20 @@
-const express = require('express')
-const pdfkit = require('pdfkit')
-const fontkit = require('fontkit')
-const svg2ttf = require('svg2ttf')
-const fs = require('fs')
-const potrace = require('potrace')
-const Jimp = require('jimp')
-var DOMParser = require('xmldom').DOMParser
+import express from 'express'
+import pdfkit from 'pdfkit'
+import fontkit from 'fontkit'
+import svg2ttf from 'svg2ttf'
+import fs from 'fs'
+import potrace from 'potrace'
+import Jimp from 'jimp'
+import { DOMParser }  from 'xmldom'
+import D from './d'
 
 const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']
 
 const app = express()
 
 app.get('/', (req, res) => {
+
+  console.log('Read image')
   const png = Jimp.read('./font/image.png', (err, img) => {
     if (err) throw err
 
@@ -22,56 +25,59 @@ app.get('/', (req, res) => {
     const lettersPerRow = Math.floor((width - edge * 2) / letterWidth)
 
     const pngs = letters.map((letter, index) => {
+      console.log('Cropping', letter)
       const x = edge + letterWidth * (index % lettersPerRow)
       const y = edge + letterHeight * Math.floor(index / lettersPerRow)
       return img.clone().crop(x, y, letterWidth, letterHeight)
     })
 
-    const randomLetter = pngs[Math.floor(Math.random() * letters.length)]
 
-    // console.log('bitmap')
-    // randomLetter .getBuffer(Jimp.MIME_PNG, (err, buffer) => {
-    //   if (err) throw err
-    //   res.writeHead(200, {
-    //     'Content-Type': Jimp.MIME_PNG,
-    //     'Content-Length': buffer.length
-    //   })
-    //   res.end(buffer)
-    // })
-    //
-    // return
+    const ds = pngs.map((png, index) => {
+      console.log('Tracing ', letters[index])
+      return new Promise((resolve, reject) => {
+        potrace.trace(png, (err, svg) => {
+          if (err) reject(err)
+          const doc = new DOMParser().parseFromString(svg)
+          resolve(new D(doc.documentElement.childNodes[1].getAttribute('d')))
+        })
+      })
+    })
 
-    potrace.trace(randomLetter, (err, svg) => {
-      if (err) throw err
-
-      const doc = new DOMParser().parseFromString(svg)
-
-
-      const d = doc.documentElement.childNodes[1].getAttribute('d')
-
-      generateFont(d, res)
-
-      res.type('image/svg+xml');
-      // res.end('???')
-      res.send(d)
-      // res.send(doc.toString())
-      // fs.writeFileSync('./font/image.svg', svg)
+    Promise.all(ds).then(ds => {
+      console.log('Generating')
+      ds.forEach(d => d.flip(null, 100).scale(5))
+      const svg = generateFont(ds.map((d, index) => ({
+        letter: letters[index],
+        d: d.d()
+      })))
+      res.send(svg)
     })
   })
 })
 
-function generateFont (letter, res) {
+function generateFont (glyphs) {
   const doc = new DOMParser().parseFromString(
     fs.readFileSync('./font/font.svg').toString(),
     'image/svg+xml'
   )
 
-  console.log('Generating SVG')
+  const font = doc.getElementsByTagName('font')[0]
+  glyphs.forEach((glyph, index) => {
+    console.log('Adding glyph', glyph.letter)
+    const glyphLowerCase = doc.createElement('glyph')
+    glyphLowerCase.setAttribute('unicode', glyph.letter.toLowerCase())
+    glyphLowerCase.setAttribute('d', glyph.d)
+    font.appendChild(glyphLowerCase)
+    const glyphUpperCase = doc.createElement('glyph')
+    glyphUpperCase.setAttribute('unicode', glyph.letter.toUpperCase())
+    glyphUpperCase.setAttribute('d', glyph.d)
+    font.appendChild(glyphUpperCase)
+  })
+  // add shapes here
+
+  console.log('Writing SVG')
   fs.writeFileSync('./font/dom.svg', doc.toString())
 
-  if (letter) {
-    // res.end(doc.documentElement.nodeName)
-  }
   return doc.toString()
 }
 

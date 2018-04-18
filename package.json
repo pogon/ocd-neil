@@ -7,16 +7,17 @@
   "author": "Goran Butorac <git@gbut.com>",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js --exec babel-node --presets latest"
   },
-  "devDependencies": {
-    "nodemon": "^1.17.2"
-  },
+  "devDependencies": {},
   "dependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-latest": "^6.24.1",
     "cubic2quad": "^1.1.1",
     "express": "^4.16.3",
     "lodash": "^4.17.5",
     "microbuffer": "^1.0.0",
+    "nodemon": "^1.17.3",
     "pdfkit": "^0.8.3",
     "potrace": "^2.1.1",
     "svg2ttf": "^4.1.0",
