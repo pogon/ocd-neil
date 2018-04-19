@@ -17,7 +17,7 @@ class Element {
   }
 
   toString () {
-    return `${this.type} ${this.sequence.map(part => `${part.x} ${part.y}`).join(',')}`
+    return `${this.type} ${this.sequence.map(part => `${Number.parseFloat(part.x.toFixed(3))} ${Number.parseFloat(part.y.toFixed(3))}`).join(',')}`
   }
 }
 
@@ -48,8 +48,8 @@ export default class D {
     this.sequence.forEach(
       element => element.sequence.forEach(
         part => {
-          if (limitX !== null) part.x = Number.parseFloat((limitX - part.x).toFixed(3))
-          if (limitY !== null) part.y = Number.parseFloat((limitY - part.y).toFixed(3))
+          if (limitX !== null) part.x = limitX - part.x
+          if (limitY !== null) part.y = limitY - part.y
         }
       )
     )
@@ -66,6 +66,38 @@ export default class D {
       )
     )
     return this
+  }
+
+  move (x, y) {
+    this.sequence.forEach(
+      element => element.sequence.forEach(
+        part => {
+          part.x += x
+          part.y += y
+        }
+      )
+    )
+    return this
+  }
+
+  analyze (scale = 1.0) {
+    this.left = this.sequence.reduce(
+      (elAcc, element) => Math.min(elAcc, element.sequence.reduce(
+        (partAcc, part) => Math.min(partAcc, part.x),
+        Infinity
+      )),
+      Infinity
+    ) * scale
+
+    this.right = this.sequence.reduce(
+      (elAcc, element) => Math.max(elAcc, element.sequence.reduce(
+        (partAcc, part) => Math.max(partAcc, part.x),
+        0
+      )),
+      0
+    ) * scale
+
+    this.width = this.right - this.left
   }
 
   d () {

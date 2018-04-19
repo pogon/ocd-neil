@@ -8,7 +8,7 @@ import Jimp from 'jimp'
 import { DOMParser }  from 'xmldom'
 import D from './d'
 
-const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']
+const letters = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('') //_&1234567890@!?#$%*-+;:,.<>/s\/~()[]{}=`.split('')
 
 const app = express()
 
@@ -32,6 +32,8 @@ app.get('/', (req, res) => {
     })
 
 
+
+
     const ds = pngs.map((png, index) => {
       console.log('Tracing ', letters[index])
       return new Promise((resolve, reject) => {
@@ -43,35 +45,59 @@ app.get('/', (req, res) => {
       })
     })
 
+
+    const scale = 1000 / letterHeight
+
     Promise.all(ds).then(ds => {
       console.log('Generating')
-      ds.forEach(d => d.flip(null, 100).scale(5))
+      let left = 0
+      ds.forEach(d => d.analyze(scale))
+      ds.forEach(d => d
+        .scale(scale)
+        .flip(null, letterHeight)
+        .move(-d.left, 400)
+      )
+      //
       const svg = generateFont(ds.map((d, index) => ({
         letter: letters[index],
-        d: d.d()
+        d: d.d(),
+        width: d.width
       })))
       res.send(svg)
     })
   })
 })
 
-function generateFont (glyphs) {
+function generateFont (paths) {
   const doc = new DOMParser().parseFromString(
     fs.readFileSync('./font/font.svg').toString(),
     'image/svg+xml'
   )
 
   const font = doc.getElementsByTagName('font')[0]
-  glyphs.forEach((glyph, index) => {
-    console.log('Adding glyph', glyph.letter)
-    const glyphLowerCase = doc.createElement('glyph')
-    glyphLowerCase.setAttribute('unicode', glyph.letter.toLowerCase())
-    glyphLowerCase.setAttribute('d', glyph.d)
-    font.appendChild(glyphLowerCase)
-    const glyphUpperCase = doc.createElement('glyph')
-    glyphUpperCase.setAttribute('unicode', glyph.letter.toUpperCase())
-    glyphUpperCase.setAttribute('d', glyph.d)
-    font.appendChild(glyphUpperCase)
+
+  function addGlyph (unicode, path) {
+    const glyph = doc.createElement('glyph')
+    glyph.setAttribute('unicode', unicode)
+    glyph.setAttribute('d', path.d)
+    glyph.setAttribute('horiz-adv-x', path.width + 30)
+    font.appendChild(glyph)
+  }
+
+  let em = null
+  for (let p of paths) {
+    if (p.letter === 'M') {
+      em = Object.assign({}, p, {d: ''})
+      break
+    }
+  }
+
+  addGlyph(' ', em)
+
+  paths.forEach((path, index) => {
+    console.log('Adding glyph', path.letter)
+    addGlyph(path.letter.toLowerCase(), path)
+    addGlyph(path.letter.toUpperCase(), path)
   })
   // add shapes here
 
@@ -80,6 +106,7 @@ function generateFont (glyphs) {
 
   return doc.toString()
 }
+
 
 app.get('/svg', (req, res) => {
   const svg = generateFont()
@@ -103,10 +130,7 @@ app.get('/test', (req, res) => {
   }
   pdf.font('./font/font.ttf')
 
-  pdf.text(`This pangram contains four As, one B, two Cs, one D, thirty Es,
-  six Fs, five Gs, seven Hs, eleven Is, one J, one K, two Ls, two Ms, eighteen
-  Ns, fifteen Os, two Ps, one Q, five Rs, twenty-seven Ss, eighteen Ts, two
-  Us, seven Vs, eight Ws, two Xs, three Ys, & one Z.`,
+  pdf.text(`This pangram contains four As, one B, two Cs, one D, thirty Es, six Fs, five Gs, seven Hs, eleven Is, one J, one K, two Ls, two Ms, eighteen Ns, fifteen Os, two Ps, one Q, five Rs, twenty-seven Ss, eighteen Ts, two Us, seven Vs, eight Ws, two Xs, three Ys, & one Z.`,
   {
     paragraphGap: 12
   })
@@ -115,39 +139,7 @@ app.get('/test', (req, res) => {
     paragraphGap: 12
   })
 
-  pdf.text(` Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
-  sit amet lorem vitae orci maximus vestibulum in sed turpis. Vivamus
-  vulputate diam nec quam pellentesque sollicitudin. Morbi viverra est ut quam
-  ullamcorper dictum. Aenean non lorem feugiat, rhoncus elit a, aliquet augue.
-  In facilisis neque dui, nec semper est dapibus at. Donec a mi ac quam
-  aliquet tincidunt. Fusce fermentum tortor et purus convallis, eu viverra
-  eros consectetur. Maecenas pharetra nunc sapien, dapibus porttitor magna
-  volutpat quis. Morbi tincidunt est at tellus faucibus gravida. Nulla
-  egestas, leo id dictum pharetra, purus dui ultrices turpis, eget hendrerit
-  purus lectus ac lectus. Cras eros leo, placerat eget ultrices iaculis,
-  interdum vel diam. Mauris malesuada ante urna, quis fermentum lacus
-  condimentum sit amet. Nunc tempor ut felis dictum mattis. Etiam mollis
-  consectetur dolor vel interdum. Sed non maximus nulla. Etiam sit amet varius
-  neque. Duis sagittis lacinia velit, vitae laoreet dolor. Duis ac erat velit.
-  Sed elit lacus, mattis in laoreet vel, porttitor sit amet est. Donec pretium
-  vehicula lobortis. Integer commodo ligula at ex scelerisque feugiat nec sit
-  amet enim. Etiam mollis faucibus arcu, ac vestibulum arcu interdum vitae.
-  Donec fringilla ante eu turpis cursus, quis viverra ligula maximus. Nullam
-  nec lacus at nisl fringilla placerat. Aliquam erat volutpat. Praesent in
-  gravida ligula. Etiam gravida eros eu felis pretium consequat. Mauris
-  volutpat, ante eu facilisis laoreet, purus elit porttitor sem, eget feugiat
-  erat ante ut ante. Aliquam erat volutpat. Nunc faucibus iaculis mattis. Nam
-  pellentesque arcu arcu, ut semper massa tristique ut. Quisque eget nibh non
-  velit cursus suscipit sed vel nisi. Phasellus faucibus quam non eros commodo
-  convallis. Aliquam mi metus, fringilla a consectetur in, imperdiet pretium
-  erat. Aenean non eros id nulla varius dignissim convallis non arcu. Donec
-  egestas dolor non erat volutpat feugiat. Morbi quis vestibulum felis.
-  Phasellus volutpat dictum nunc et elementum. Donec convallis bibendum arcu
-  malesuada lacinia. Duis at aliquam odio. Phasellus eget scelerisque magna,
-  pellentesque ultricies magna. Curabitur a est urna. Nulla at magna quis
-  augue rutrum pharetra eget id purus. Cras non lacus sed magna rhoncus
-  iaculis. Maecenas ut condimentum dolor. Donec luctus felis a tempus
-  vehicula.`,
+  pdf.text(`On the other hand, we denounce with righteous indignation and dislike men who are so beguiled and demoralized by the charms of pleasure of the moment, so blinded by desire, that they cannot foresee the pain and trouble that are bound to ensue; and equal blame belongs to those who fail in their duty through weakness of will, which is the same as saying through shrinking from toil and pain. These cases are perfectly simple and easy to distinguish. In a free hour, when our power of choice is untrammelled and when nothing prevents our being able to do what we like best, every pleasure is to be welcomed and every pain avoided. But in certain circumstances and owing to the claims of duty or the obligations of business it will frequently occur that pleasures have to be repudiated and annoyances accepted. The wise man therefore always holds in these matters to this principle of selection: he rejects pleasures to secure other greater pleasures, or else he endures pains to avoid worse pains.`,
   {
     paragraphGap: 12
   })
