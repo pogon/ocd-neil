@@ -8,7 +8,7 @@ import Jimp from 'jimp'
 import { DOMParser }  from 'xmldom'
 import D from './d'
 
-const letters = `ABCDEFGHIJKLMNOPQRSTUVWXYZ`.split('') //_&1234567890@!?#$%*-+;:,.<>/s\/~()[]{}=`.split('')
+const letters = `ABCDEFGHIJKLMNOPQRSTUVWXYZ_&1234567890@!?#$%*-+;:,.<>/s\/~()[]{}=`.split('')
 
 const app = express()
 
