@@ -942,6 +942,10 @@ code-point-at@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
+coffee-script@^1.12.7:
+  version "1.12.7"
+  resolved "https://registry.yarnpkg.com/coffee-script/-/coffee-script-1.12.7.tgz#c05dae0cb79591d05b3070a8433a98c9a89ccc53"
+
 collection-visit@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/collection-visit/-/collection-visit-1.0.0.tgz#4bc0373c164bc3291b4d368c829cf1a80a59dca0"
@@ -2609,9 +2613,9 @@ pause-stream@0.0.11:
   dependencies:
     through "~2.3"
 
-pdfkit@^0.8.3:
+"pdfkit@https://github.com/pogon/pdfkit.git#v0.8.4":
   version "0.8.3"
-  resolved "https://registry.yarnpkg.com/pdfkit/-/pdfkit-0.8.3.tgz#ec99a57fc55ca309726f856456da14418f5330e3"
+  resolved "https://github.com/pogon/pdfkit.git#34cf8d5fa6c8a875ba908c022b75b4f9ef5e07a7"
   dependencies:
     fontkit "^1.0.0"
     linebreak "^0.3.0"
