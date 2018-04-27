@@ -16,8 +16,8 @@ class Element {
     }
   }
 
-  toString () {
-    return `${this.type} ${this.sequence.map(part => `${Number.parseFloat(part.x.toFixed(3))} ${Number.parseFloat(part.y.toFixed(3))}`).join(',')}`
+  toString (f) {
+    return `${this.type} ${this.sequence.map(part => `${Number.parseFloat((part.x * (f ? f : 1.0)).toFixed(3))} ${Number.parseFloat((part.y * (f ? f : 1.0)).toFixed(3))}`).join(',')}`
   }
 }
 
@@ -100,7 +100,7 @@ export default class D {
     this.width = this.right - this.left
   }
 
-  d () {
-    return this.sequence.map(element => element.toString()).join(' ')
+  d (f) {
+    return this.sequence.map(element => element.toString(f)).join(' ')
   }
 }

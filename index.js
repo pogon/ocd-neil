@@ -8,17 +8,18 @@ import Jimp from 'jimp'
 import { DOMParser }  from 'xmldom'
 import D from './d'
 
-const letters = `ABCDEFGHIJKLMNOPQRSTUVWXYZ_&1234567890@!?#$%*-+;:,.<>/\\~()[]{}=`.split('')
-const margin = 68
+const letters = `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz{|}~`.split('')
+const margin = 51 // 68
 const pageWidth = 612
 const pageHeight = 792
-const cellWidth = 68
-const cellHeight = 68
+const cellWidth = 51 // 68
+const cellHeight = 51 // 68
+const cellPad = 1 // 3
 
 const capHeight = 600
-const xHeight = 400
+const xHeight = 425
 const ascent = 700
-const descent = 300
+const descent = 250
 const alphabetic = 0
 const mathematical = 350
 const ideographic = 400
@@ -31,7 +32,7 @@ const app = express()
 app.get('/template', (req, res) => {
   console.log('Generating Template')
   const pdf = new pdfkit({
-    margin
+    margin: 0
   })
   pdf.info = {
     Title: 'OCD Neil Template',
@@ -39,35 +40,57 @@ app.get('/template', (req, res) => {
     Subject: 'OCD Neil Font Template'
   }
 
-  pdf.font('./font/font.ttf').fontSize(32)
+  const lettersInRow = Math.floor((pageWidth - margin * 2) / cellWidth)
+  const lettersInColumn = Math.floor((pageHeight - margin * 2) / cellHeight)
+
+  // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 56)
+  pdf.fontSize(cellHeight / 68 * 56)
 
   letters.forEach((letter, index) => {
-    const x = margin + index % 7 * cellWidth
-    const y = margin + Math.floor(index / 7) * cellHeight
-    pdf.rect(x, y, cellWidth, cellHeight)
-      .lineWidth(0.5)
-      .strokeColor('#0f0')
-      .stroke()
+    const x = margin + index % lettersInRow * cellWidth
+    const row = Math.floor(index / lettersInRow) % lettersInColumn
+    if (index && index % lettersInRow === 0 && row === 0) {
+      pdf.addPage()
+    }
+    const y = margin + row * cellHeight
 
     const baselineY = (1000 - descent) / 1000 * cellHeight
     const capHeightY = baselineY - capHeight / 1000 * cellHeight
+    const xHeightY = baselineY - xHeight / 1000 * cellHeight
 
-    pdf.moveTo(x, y + baselineY)
-      .lineTo(x + cellWidth, y + baselineY)
-      .lineWidth(0.1)
-      .strokeColor('#f00')
-      .stroke()
-
-    pdf.moveTo(x, y + capHeightY)
-      .lineTo(x + cellWidth, y + capHeightY)
-      .stroke()
-
+    pdf.fillColor('cyan')
+    pdf.fillOpacity(0.25)
 
     pdf.text(letter, x, y + baselineY, {
       width: cellWidth,
       align: 'center',
       baseline: 'alphabetic'
     })
+
+    pdf.strokeColor('cyan')
+    pdf.strokeOpacity(1.0)
+
+    pdf.rect(x + cellPad, y + cellPad, cellWidth - cellPad * 2, cellHeight - cellPad * 2)
+      .lineWidth(0.5)
+      .stroke()
+
+    // pdf.strokeOpacity(0.75)
+
+    pdf.moveTo(x, y + baselineY)
+      .lineTo(x + cellWidth, y + baselineY)
+      .lineWidth(0.1)
+      .stroke()
+
+    pdf.moveTo(x, y + capHeightY)
+      .lineTo(x + cellWidth, y + capHeightY)
+      .stroke()
+
+    // pdf.strokeOpacity(0.5)
+
+    pdf.moveTo(x, y + xHeightY)
+      .lineTo(x + cellWidth, y + xHeightY)
+      .stroke()
+
   })
 
   pdf.pipe(res)
@@ -109,20 +132,21 @@ app.get('/', (req, res) => {
     })
 
     const scale = 1000 / letterHeight
+    const f = 1.25
 
     Promise.all(ds).then(ds => {
       let left = 0
       ds.forEach(d => d.analyze(scale))
       ds.forEach(d => d
-        .scale(scale)
         .flip(null, letterHeight)
-        .move(-d.left, 400)
+        .scale(scale)
+        .move(-d.left, -descent)
       )
       //
       paths = ds.map((d, index) => ({
         letter: letters[index],
-        d: d.d(),
-        width: d.width
+        d: d.d(f),
+        width: d.width * f
       }))
       const svg = generateFont(paths)
 
