@@ -13,7 +13,7 @@ const margin = 51 // 68
 const pageWidth = 612
 const pageHeight = 792
 const cellWidth = 51 // 68
-const cellHeight = 51 // 68
+const cellHeight = 63 // 68
 const cellPad = 1 // 3
 
 const capHeight = 600
@@ -27,9 +27,23 @@ const hanging = 500
 
 let paths
 
+// const color = 'cyan'
+
+const boxColor = 'red'
+const lineColor = 'orange'
+const letterColor = 'orange'
+const markerColor = 'black'
+
 const app = express()
 
-app.get('/template', (req, res) => {
+app.use(express.static('./font'))
+
+function generateTemplate (res, options = {}) {
+  const opt = Object.assign({
+    glyphs: true,
+    labelsOnly: true
+  }, options)
+
   console.log('Generating Template')
   const pdf = new pdfkit({
     margin: 0
@@ -43,8 +57,10 @@ app.get('/template', (req, res) => {
   const lettersInRow = Math.floor((pageWidth - margin * 2) / cellWidth)
   const lettersInColumn = Math.floor((pageHeight - margin * 2) / cellHeight)
 
-  // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 56)
-  pdf.fontSize(cellHeight / 68 * 56)
+  // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 55)
+  pdf.font('./font/font.ttf')
+  // pdf.fontSize(cellHeight / 68 * 54)
+  pdf.fontSize(cellHeight / 68 * (opt.labelsOnly ? 10 : 54))
 
   letters.forEach((letter, index) => {
     const x = margin + index % lettersInRow * cellWidth
@@ -58,49 +74,93 @@ app.get('/template', (req, res) => {
     const capHeightY = baselineY - capHeight / 1000 * cellHeight
     const xHeightY = baselineY - xHeight / 1000 * cellHeight
 
-    pdf.fillColor('cyan')
-    pdf.fillOpacity(0.25)
+    if (opt.glyphs) {
+      pdf.fillColor(opt.labelsOnly ? lineColor : letterColor)
+      pdf.fillOpacity(opt.labelsOnly ? 0.5 : 0.1)
 
-    pdf.text(letter, x, y + baselineY, {
-      width: cellWidth,
-      align: 'center',
-      baseline: 'alphabetic'
-    })
+      if (opt.labelsOnly) {
+        pdf.text(letter, x + cellPad * 4, y + cellHeight - cellPad * 4, {
+          width: cellWidth,
+          align: 'left',
+          baseline: 'alphabetic'
+        })
+      } else {
+        pdf.text(letter, x, y + baselineY, {
+          width: cellWidth,
+          align: 'center',
+          baseline: 'alphabetic'
+        })
+      }
+    }
 
-    pdf.strokeColor('cyan')
-    pdf.strokeOpacity(1.0)
+    pdf.strokeColor(boxColor)
+    pdf.strokeOpacity(0.5)
+    pdf.lineWidth(0.2)
 
     pdf.rect(x + cellPad, y + cellPad, cellWidth - cellPad * 2, cellHeight - cellPad * 2)
-      .lineWidth(0.5)
       .stroke()
 
-    // pdf.strokeOpacity(0.75)
+    pdf.strokeColor(lineColor)
+    pdf.lineWidth(0.1)
 
-    pdf.moveTo(x, y + baselineY)
-      .lineTo(x + cellWidth, y + baselineY)
-      .lineWidth(0.1)
+    pdf.moveTo(x + cellPad, y + baselineY)
+      .lineTo(x + cellWidth - cellPad, y + baselineY)
       .stroke()
 
-    pdf.moveTo(x, y + capHeightY)
-      .lineTo(x + cellWidth, y + capHeightY)
+    pdf.moveTo(x + cellPad, y + capHeightY)
+      .lineTo(x + cellWidth - cellPad, y + capHeightY)
       .stroke()
 
-    // pdf.strokeOpacity(0.5)
-
-    pdf.moveTo(x, y + xHeightY)
-      .lineTo(x + cellWidth, y + xHeightY)
+    pdf.moveTo(x + cellPad, y + xHeightY)
+      .lineTo(x + cellWidth - cellPad, y + xHeightY)
       .stroke()
-
   })
+
+  pdf.strokeColor(markerColor)
+  pdf.strokeOpacity(1)
+  pdf.lineWidth(1)
+
+  pdf.moveTo(margin / 2, margin / 2 + 6)
+    .lineTo(margin / 2, margin / 2)
+    .lineTo(margin / 2 + 6, margin / 2)
+    .stroke()
+
+  pdf.moveTo(pageWidth - margin / 2, margin / 2 + 6)
+    .lineTo(pageWidth - margin / 2, margin / 2)
+    .lineTo(pageWidth - margin / 2 - 6, margin / 2)
+    .stroke()
+
+  pdf.moveTo(margin / 2, pageHeight - margin / 2 - 6)
+    .lineTo(margin / 2, pageHeight - margin / 2)
+    .lineTo(margin / 2 + 6, pageHeight - margin / 2)
+    .stroke()
+
+  pdf.moveTo(pageWidth - margin / 2, pageHeight - margin / 2 - 6)
+    .lineTo(pageWidth - margin / 2, pageHeight - margin / 2)
+    .lineTo(pageWidth - margin / 2 - 6, pageHeight - margin / 2)
+    .stroke()
+
+  pdf.fillColor(markerColor)
+  pdf.fillOpacity(1.0)
+
+  pdf.text('pogon.org/ocd-neil', margin, pageHeight - margin / 2, {
+        width: pageWidth - margin * 2,
+        align: 'center',
+        baseline: 'alphabetic'
+      })
 
   pdf.pipe(res)
   pdf.end()
+}
+
+app.get('/template', (req, res) => {
+  generateTemplate(res)
 })
 
-app.get('/', (req, res) => {
+app.get('/generate', (req, res) => {
 
   console.log('Read image')
-  const png = Jimp.read('./font/image.png', (err, img) => {
+  const png = Jimp.read('./font/image_l.jpg', (err, img) => {
     if (err) throw err
 
     img.resize(500, Jimp.AUTO)
@@ -123,7 +183,9 @@ app.get('/', (req, res) => {
     const ds = pngs.map((png, index) => {
       console.log('Tracing ', letters[index])
       return new Promise((resolve, reject) => {
-        potrace.trace(png, (err, svg) => {
+        potrace.trace(png, {
+          threshold: 64
+        }, (err, svg) => {
           if (err) reject(err)
           const doc = new DOMParser().parseFromString(svg)
           resolve(new D(doc.documentElement.childNodes[1].getAttribute('d')))
@@ -132,21 +194,27 @@ app.get('/', (req, res) => {
     })
 
     const scale = 1000 / letterHeight
-    const f = 1.25
+    const f = 1.30
 
     Promise.all(ds).then(ds => {
       let left = 0
-      ds.forEach(d => d.analyze(scale))
+      let en = null
+      ds.map(d => d.analyze(scale)).forEach((d, index) => {
+        if (letters[index] === 'N') {
+          en = Number.parseInt(d.width)
+        }
+      })
       ds.forEach(d => d
         .flip(null, letterHeight)
         .scale(scale)
-        .move(-d.left, -descent)
+        .move(-d.left + (en || 0) * 0.1, -descent)
       )
       //
       paths = ds.map((d, index) => ({
         letter: letters[index],
         d: d.d(f),
-        width: d.width * f
+        width: d.width * f,
+        en: en * f
       }))
       const svg = generateFont(paths)
 
@@ -210,27 +278,20 @@ function generateFont (paths) {
 
   const font = doc.getElementsByTagName('font')[0]
 
-  function addGlyph (unicode, path, en, spacingFactor = 0) {
-    console.log('Adding glyph', unicode, en)
+  function addGlyph (unicode, path) {
+    console.log('Adding glyph', unicode)
     const glyph = doc.createElement('glyph')
     glyph.setAttribute('unicode', unicode)
     glyph.setAttribute('d', path.d)
-    glyph.setAttribute('horiz-adv-x', path.width + en * spacingFactor)
+    glyph.setAttribute('horiz-adv-x', path.width)
     font.appendChild(glyph)
   }
 
-  let en = null
-  for (let p of paths) {
-    if (p.letter === 'N') {
-      en = Number.parseInt(p.width)
-      addGlyph(' ', {d: '', width: p.width}, en)
-      break
-    }
-  }
+  console.log("EN:", paths[0].en)
+  addGlyph(' ', Object.assign({}, paths[0], { d: '', width: paths[0].en * 0.4}))
 
   paths.forEach((path, index) => {
-    addGlyph(path.letter.toLowerCase(), path, en)
-    addGlyph(path.letter.toUpperCase(), path, en)
+    addGlyph(path.letter, Object.assign(path, { width: path.width + path.en * 0.2}))
   })
 
   console.log('Writing SVG')

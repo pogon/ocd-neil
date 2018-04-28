@@ -98,6 +98,8 @@ export default class D {
     ) * scale
 
     this.width = this.right - this.left
+
+    return this
   }
 
   d (f) {
