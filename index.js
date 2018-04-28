@@ -41,7 +41,8 @@ app.use(express.static('./font'))
 function generateTemplate (res, options = {}) {
   const opt = Object.assign({
     glyphs: true,
-    labelsOnly: true
+    labels: true,
+    form: false
   }, options)
 
   console.log('Generating Template')
@@ -60,7 +61,7 @@ function generateTemplate (res, options = {}) {
   // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 55)
   pdf.font('./font/font.ttf')
   // pdf.fontSize(cellHeight / 68 * 54)
-  pdf.fontSize(cellHeight / 68 * (opt.labelsOnly ? 10 : 54))
+  pdf.fontSize(cellHeight / 68 * (opt.labels ? 10 : 54))
 
   letters.forEach((letter, index) => {
     const x = margin + index % lettersInRow * cellWidth
@@ -75,21 +76,31 @@ function generateTemplate (res, options = {}) {
     const xHeightY = baselineY - xHeight / 1000 * cellHeight
 
     if (opt.glyphs) {
-      pdf.fillColor(opt.labelsOnly ? lineColor : letterColor)
-      pdf.fillOpacity(opt.labelsOnly ? 0.5 : 0.1)
+      pdf.fillColor(opt.labels ? lineColor : letterColor)
+      pdf.fillOpacity(opt.labels ? 1.0 : 0.5)
 
-      if (opt.labelsOnly) {
-        pdf.text(letter, x + cellPad * 4, y + cellHeight - cellPad * 4, {
-          width: cellWidth,
-          align: 'left',
-          baseline: 'alphabetic'
-        })
+      if (opt.labels) {
+        pdf.text(
+          letter,
+          x + cellPad * 4,
+          y + cellHeight - cellPad * 4,
+          {
+            width: cellWidth,
+            align: 'left',
+            baseline: 'alphabetic'
+          }
+        )
       } else {
-        pdf.text(letter, x, y + baselineY, {
-          width: cellWidth,
-          align: 'center',
-          baseline: 'alphabetic'
-        })
+        pdf.text(
+          letter,
+          x,
+          y + baselineY,
+          {
+            width: cellWidth,
+            align: 'center',
+            baseline: 'alphabetic'
+          }
+        )
       }
     }
 
@@ -143,11 +154,38 @@ function generateTemplate (res, options = {}) {
   pdf.fillColor(markerColor)
   pdf.fillOpacity(1.0)
 
-  pdf.text('pogon.org/ocd-neil', margin, pageHeight - margin / 2, {
+  if (opt.form) {
+    pdf.fontSize(7)
+    pdf.fillColor(markerColor)
+
+    pdf.text(
+      'Name: __________________________________________________\nEmail: __________________________________________________',
+      margin,
+      pageHeight - margin * 1.75,
+      {
         width: pageWidth - margin * 2,
-        align: 'center',
-        baseline: 'alphabetic'
-      })
+        align: 'right',
+        baseline: 'alphabetic',
+        lineGap: 14
+      }
+    )
+  }
+
+  pdf.fontSize(6)
+  pdf.fillColor(lineColor)
+
+  pdf.text(
+    'OCD Neil font project - ASCII Template Sheet v0.0.1\npogon.org/ocd-neil',
+    margin,
+    pageHeight - margin,
+    {
+      width: pageWidth - margin * 2,
+      align: 'right',
+      baseline: 'bottom',
+      lineGap: 2,
+      continued: true
+    }
+  )
 
   pdf.pipe(res)
   pdf.end()
@@ -157,13 +195,26 @@ app.get('/template', (req, res) => {
   generateTemplate(res)
 })
 
+app.get('/template/labels', (req, res) => {
+  generateTemplate(res, {
+    labels: true
+  })
+})
+
+app.get('/template/full', (req, res) => {
+  generateTemplate(res, {
+    labels: true,
+    form: true
+  })
+})
+
 app.get('/generate', (req, res) => {
 
   console.log('Read image')
-  const png = Jimp.read('./font/image_l.jpg', (err, img) => {
+  const png = Jimp.read('./font/image_obliq.png', (err, img) => {
     if (err) throw err
 
-    img.resize(500, Jimp.AUTO)
+    // img.resize(1000, Jimp.AUTO)
 
     const [ width, height ] = [ img.bitmap.width, img.bitmap.height ]
     const factor = width / pageWidth
@@ -184,7 +235,7 @@ app.get('/generate', (req, res) => {
       console.log('Tracing ', letters[index])
       return new Promise((resolve, reject) => {
         potrace.trace(png, {
-          threshold: 64
+          threshold: 128
         }, (err, svg) => {
           if (err) reject(err)
           const doc = new DOMParser().parseFromString(svg)
