@@ -8,7 +8,11 @@ import Jimp from 'jimp'
 import { DOMParser }  from 'xmldom'
 import D from './d'
 
-const letters = `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz{|}~`.split('')
+const ascii = `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz` //{|}~`
+// const croatian = 'ŠĐŽČĆšđžčć'
+const codes = [353, 273, 382, 269, 263, 352, 272, 381, 268, 262]
+const croatian = codes.map(code => String.fromCharCode(code)).join('')
+const letters = (ascii + croatian).split('')
 const margin = 51 // 68
 const pageWidth = 612
 const pageHeight = 792
@@ -41,7 +45,7 @@ app.use(express.static('./font'))
 function generateTemplate (res, options = {}) {
   const opt = Object.assign({
     glyphs: true,
-    labels: true,
+    labels: false,
     form: false
   }, options)
 
@@ -59,14 +63,80 @@ function generateTemplate (res, options = {}) {
   const lettersInColumn = Math.floor((pageHeight - margin * 2) / cellHeight)
 
   // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 55)
-  pdf.font('./font/font.ttf')
+  // pdf.font('./font/font.ttf')
   // pdf.fontSize(cellHeight / 68 * 54)
+
+  // pdf.font('sans-seri')
+  function drawMarkers() {
+    pdf.strokeColor(markerColor)
+    pdf.strokeOpacity(1)
+    pdf.lineWidth(1)
+
+    pdf.moveTo(margin / 2, margin / 2 + 6)
+      .lineTo(margin / 2, margin / 2)
+      .lineTo(margin / 2 + 6, margin / 2)
+      .stroke()
+
+    pdf.moveTo(pageWidth - margin / 2, margin / 2 + 6)
+      .lineTo(pageWidth - margin / 2, margin / 2)
+      .lineTo(pageWidth - margin / 2 - 6, margin / 2)
+      .stroke()
+
+    pdf.moveTo(margin / 2, pageHeight - margin / 2 - 6)
+      .lineTo(margin / 2, pageHeight - margin / 2)
+      .lineTo(margin / 2 + 6, pageHeight - margin / 2)
+      .stroke()
+
+    pdf.moveTo(pageWidth - margin / 2, pageHeight - margin / 2 - 6)
+      .lineTo(pageWidth - margin / 2, pageHeight - margin / 2)
+      .lineTo(pageWidth - margin / 2 - 6, pageHeight - margin / 2)
+      .stroke()
+
+    pdf.fillColor(markerColor)
+    pdf.fillOpacity(1.0)
+
+    if (opt.form) {
+      pdf.fontSize(7)
+      pdf.fillColor(markerColor)
+
+      pdf.text(
+        'Name: __________________________________________________\nEmail: __________________________________________________',
+        margin,
+        pageHeight - margin * 1.75,
+        {
+          width: pageWidth - margin * 2,
+          align: 'right',
+          baseline: 'alphabetic',
+          lineGap: 14
+        }
+      )
+    }
+
+    pdf.fontSize(6)
+    pdf.fillColor(lineColor)
+
+    pdf.text(
+      'OCD Neil font project - ASCII Template Sheet v0.0.1\npogon.org/ocd-neil',
+      margin,
+      pageHeight - margin,
+      {
+        width: pageWidth - margin * 2,
+        align: 'right',
+        baseline: 'bottom',
+        lineGap: 2,
+        continued: true
+      }
+    )
+    pdf.fontSize(cellHeight / 68 * (opt.labels ? 10 : 54))
+  }
+
   pdf.fontSize(cellHeight / 68 * (opt.labels ? 10 : 54))
 
   letters.forEach((letter, index) => {
     const x = margin + index % lettersInRow * cellWidth
     const row = Math.floor(index / lettersInRow) % lettersInColumn
     if (index && index % lettersInRow === 0 && row === 0) {
+      drawMarkers()
       pdf.addPage()
     }
     const y = margin + row * cellHeight
@@ -104,6 +174,7 @@ function generateTemplate (res, options = {}) {
       }
     }
 
+
     pdf.strokeColor(boxColor)
     pdf.strokeOpacity(0.5)
     pdf.lineWidth(0.2)
@@ -127,65 +198,7 @@ function generateTemplate (res, options = {}) {
       .stroke()
   })
 
-  pdf.strokeColor(markerColor)
-  pdf.strokeOpacity(1)
-  pdf.lineWidth(1)
-
-  pdf.moveTo(margin / 2, margin / 2 + 6)
-    .lineTo(margin / 2, margin / 2)
-    .lineTo(margin / 2 + 6, margin / 2)
-    .stroke()
-
-  pdf.moveTo(pageWidth - margin / 2, margin / 2 + 6)
-    .lineTo(pageWidth - margin / 2, margin / 2)
-    .lineTo(pageWidth - margin / 2 - 6, margin / 2)
-    .stroke()
-
-  pdf.moveTo(margin / 2, pageHeight - margin / 2 - 6)
-    .lineTo(margin / 2, pageHeight - margin / 2)
-    .lineTo(margin / 2 + 6, pageHeight - margin / 2)
-    .stroke()
-
-  pdf.moveTo(pageWidth - margin / 2, pageHeight - margin / 2 - 6)
-    .lineTo(pageWidth - margin / 2, pageHeight - margin / 2)
-    .lineTo(pageWidth - margin / 2 - 6, pageHeight - margin / 2)
-    .stroke()
-
-  pdf.fillColor(markerColor)
-  pdf.fillOpacity(1.0)
-
-  if (opt.form) {
-    pdf.fontSize(7)
-    pdf.fillColor(markerColor)
-
-    pdf.text(
-      'Name: __________________________________________________\nEmail: __________________________________________________',
-      margin,
-      pageHeight - margin * 1.75,
-      {
-        width: pageWidth - margin * 2,
-        align: 'right',
-        baseline: 'alphabetic',
-        lineGap: 14
-      }
-    )
-  }
-
-  pdf.fontSize(6)
-  pdf.fillColor(lineColor)
-
-  pdf.text(
-    'OCD Neil font project - ASCII Template Sheet v0.0.1\npogon.org/ocd-neil',
-    margin,
-    pageHeight - margin,
-    {
-      width: pageWidth - margin * 2,
-      align: 'right',
-      baseline: 'bottom',
-      lineGap: 2,
-      continued: true
-    }
-  )
+  drawMarkers()
 
   pdf.pipe(res)
   pdf.end()
@@ -203,7 +216,7 @@ app.get('/template/labels', (req, res) => {
 
 app.get('/template/full', (req, res) => {
   generateTemplate(res, {
-    labels: true,
+    labels: false,
     form: true
   })
 })
@@ -211,10 +224,10 @@ app.get('/template/full', (req, res) => {
 app.get('/generate', (req, res) => {
 
   console.log('Read image')
-  const png = Jimp.read('./font/image_obliq.png', (err, img) => {
+  const png = Jimp.read('./font/image_zlo_fixed.png', (err, img) => {
     if (err) throw err
 
-    // img.resize(1000, Jimp.AUTO)
+    img.resize(1000, Jimp.AUTO)
 
     const [ width, height ] = [ img.bitmap.width, img.bitmap.height ]
     const factor = width / pageWidth
@@ -338,8 +351,7 @@ function generateFont (paths) {
     font.appendChild(glyph)
   }
 
-  console.log("EN:", paths[0].en)
-  addGlyph(' ', Object.assign({}, paths[0], { d: '', width: paths[0].en * 0.4}))
+  addGlyph(' ', Object.assign({}, paths[0], { d: '', width: paths[0].en * 0.8}))
 
   paths.forEach((path, index) => {
     addGlyph(path.letter, Object.assign(path, { width: path.width + path.en * 0.2}))
