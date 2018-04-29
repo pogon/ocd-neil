@@ -6,6 +6,7 @@ import fs from 'fs'
 import potrace from 'potrace'
 import Jimp from 'jimp'
 import { DOMParser }  from 'xmldom'
+import crypto from 'crypto'
 import D from './d'
 
 const ascii = `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz` //{|}~`
@@ -224,7 +225,7 @@ app.get('/template/full', (req, res) => {
 app.get('/generate', (req, res) => {
 
   console.log('Read image')
-  const png = Jimp.read('./font/image_zlo_fixed.png', (err, img) => {
+  const png = Jimp.read('./font/image_z.png', (err, img) => {
     if (err) throw err
 
     img.resize(1000, Jimp.AUTO)
@@ -284,7 +285,15 @@ app.get('/generate', (req, res) => {
 
       console.log('Generating font')
       const ttf = svg2ttf(fs.readFileSync('./font/dom.svg', 'utf8'), {})
-      fs.writeFileSync('./font/font.ttf', new Buffer(ttf.buffer))
+
+      const shasum = crypto.createHash('sha1')
+      shasum.update(new Buffer(ttf.buffer))
+      const hex = shasum.digest('hex')
+      fs.writeFileSync(`./font/fonts/${hex}.ttf`, new Buffer(ttf.buffer))
+
+
+
+      res.redirect(`/#${hex}`)
 
       console.log('Generating PDF')
       const pdf = new pdfkit({
