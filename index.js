@@ -22,15 +22,17 @@ const cellHeight = 63 // 68
 const cellPad = 1 // 3
 
 const capHeight = 600
-const xHeight = 425
+const xHeight = 370
 const ascent = 700
-const descent = 250
+const descent = 225
 const alphabetic = 0
 const mathematical = 350
 const ideographic = 400
 const hanging = 500
+const fontHeight = capHeight + descent
 
 let paths
+let hex
 
 // const color = 'cyan'
 
@@ -47,7 +49,8 @@ function generateTemplate (res, options = {}) {
   const opt = Object.assign({
     glyphs: true,
     labels: false,
-    form: false
+    form: false,
+    self: false
   }, options)
 
   console.log('Generating Template')
@@ -63,9 +66,7 @@ function generateTemplate (res, options = {}) {
   const lettersInRow = Math.floor((pageWidth - margin * 2) / cellWidth)
   const lettersInColumn = Math.floor((pageHeight - margin * 2) / cellHeight)
 
-  // pdf.font('./font/font.ttf').fontSize(cellHeight / 68 * 55)
-  // pdf.font('./font/font.ttf')
-  // pdf.fontSize(cellHeight / 68 * 54)
+  if (opt.font && hex) pdf.font(`./font/fonts/${hex}.ttf`)
 
   // pdf.font('sans-seri')
   function drawMarkers() {
@@ -217,8 +218,14 @@ app.get('/template/labels', (req, res) => {
 
 app.get('/template/full', (req, res) => {
   generateTemplate(res, {
-    labels: false,
     form: true
+  })
+})
+
+app.get('/template/self', (req, res) => {
+  req
+  generateTemplate(res, {
+    font: true
   })
 })
 
@@ -258,7 +265,7 @@ app.get('/generate', (req, res) => {
       })
     })
 
-    const scale = 1000 / letterHeight
+    const scale = fontHeight / letterHeight
     const f = 1.30
 
     Promise.all(ds).then(ds => {
@@ -288,7 +295,7 @@ app.get('/generate', (req, res) => {
 
       const shasum = crypto.createHash('sha1')
       shasum.update(new Buffer(ttf.buffer))
-      const hex = shasum.digest('hex')
+      hex = shasum.digest('hex')
       fs.writeFileSync(`./font/fonts/${hex}.ttf`, new Buffer(ttf.buffer))
 
 
@@ -345,7 +352,37 @@ app.get('/generate', (req, res) => {
 
 function generateFont (paths) {
   const doc = new DOMParser().parseFromString(
-    fs.readFileSync('./font/font.svg').toString(),
+    `<?xml version="1.0" standalone="yes"?>
+<svg width="400px" height="300px" version="1.1"
+  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:data="https://pogon.org/data">
+  <defs>
+    <font id="Font1" horiz-adv-x="1000">
+      <font-face
+        font-family="Super Sans"
+        font-weight="regular"
+        font-style="normal"
+        units-per-em="1000"
+        cap-height="${capHeight}"
+        x-height="${xHeight}"
+        ascent="${ascent}"
+        descent="${descent}"
+        alphabetic="0"
+        mathematical="${mathematical}"
+        ideographic="${ideographic}"
+        hanging="${hanging}"
+        width="1000"
+      >
+        <font-face-src>
+          <font-face-name name="Super Sans Regular"/>
+        </font-face-src>
+      </font-face>
+      <!-- <missing-glyph horiz-adv-x="1000" d="M 0 0 L 1000 1000 L 1000 0 Z"></missing-glyph> -->
+    </font>
+  </defs>
+  <text x="100" y="100" style="font-family: 'Super Sans', Helvetica, sans-serif; font-weight: bold; font-style: normal">
+    Text using embedded font aaa!@AAA
+  </text>
+</svg>`,
     'image/svg+xml'
   )
 
